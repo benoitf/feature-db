@@ -23,6 +23,7 @@ import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -104,7 +105,12 @@ public class H2Driver implements Driver {
      * Unregister the driver in the driver manager
      */
     @Invalidate
-    public void unvalidate() throws SQLException {
+    public void invalidate() throws SQLException {
+        // stop all database still running
+        Collection<H2Server> servers = this.servers.values();
+        for (H2Server server : servers) {
+            server.stop();
+        }
         DriverManager.deregisterDriver(this);
     }
 
