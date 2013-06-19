@@ -24,7 +24,7 @@
   <packaging>bundle</packaging>
   <groupId>com.peergreen.db</groupId>
   <artifactId>peergreen-db-h2</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <name>Peergreen H2 database</name>
 
@@ -36,7 +36,7 @@
     <connection>scm:git:https://forge.peergreen.com/git/git/feature/db/h2.git</connection>
     <developerConnection>scm:git:https://forge.peergreen.com/git/git/feature/db/h2.git</developerConnection>
     <url>https://forge.peergreen.com/git/summary/?r=feature/db/h2.git</url>
-    <tag>HEAD</tag>
+    <tag>PEERGREEN_DB_H2_1_0_0</tag>
   </scm>
 
   <dependencies>
@@ -113,6 +113,22 @@
       </plugin>
     </plugins>
   </build>
+
+
+  <repositories>
+    <repository>
+      <id>peergreen.release</id>
+      <name>Peergreen Release Nexus</name>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <url>https://forge.peergreen.com/nexus/content/repositories/releases/</url>
+      <layout>default</layout>
+    </repository>
+  </repositories>
 
 </project>
 
