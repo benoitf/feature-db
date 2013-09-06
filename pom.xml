@@ -101,6 +101,7 @@
           <instructions>
             <_include>-target/classes/META-INF/${project.artifactId}.bnd</_include>
             <_plugin>org.apache.felix.ipojo.bnd.PojoizationPlugin</_plugin>
+            <Import-Package>org.h2,*</Import-Package>
           </instructions>
         </configuration>
         <dependencies>
