@@ -31,15 +31,16 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Logger;
 
-import org.apache.felix.ipojo.annotations.Bind;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Instantiate;
 import org.apache.felix.ipojo.annotations.Invalidate;
+import org.apache.felix.ipojo.annotations.PostRegistration;
+import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.h2.engine.Constants;
 import org.h2.jdbc.JdbcConnection;
 import org.osgi.framework.BundleContext;
-import org.osgi.service.jdbc.DataSourceFactory;
+import org.osgi.framework.ServiceReference;
 
 import com.peergreen.db.h2.internal.H2ConnectionInvocationHandler;
 import com.peergreen.db.h2.internal.H2Server;
@@ -49,55 +50,63 @@ import com.peergreen.db.h2.internal.H2ServerException;
  * Peergreen H2 driver that allows to create on-the fly the required database
  * @author Florent Benoit
  */
-@Component
+@Component(factoryMethod = "instance")
 @Instantiate
+@Provides // Keep this to have @PostRegistration working to get the actual BundleContext
 public class H2Driver implements Driver {
+
+    private static H2Driver INSTANCE = new H2Driver();
+
+    static {
+        try {
+            DriverManager.registerDriver(INSTANCE);
+        } catch (SQLException e) {
+            // Ignored
+        }
+    }
+
+    /**
+     * iPOJO factory method to ensure that no other instances of that class is created.
+     */
+    public static H2Driver instance() {
+        return INSTANCE;
+    }
 
     private static final String PGH2_START_URL = "jdbc:pg+h2:";
 
     private static final String PGH2_START_TCP_URL_LOCALHOST = PGH2_START_URL.concat("tcp://localhost:");
-
-
-    private DataSourceFactory h2DataSourceFactory;
 
     /**
      * Wrapped driver.
      */
     private Driver wrappedDriver;
 
-    private final Map<Integer, H2Server> servers;
+    private final Map<Integer, H2Server> servers = new HashMap<>();
 
     // map : <port numner> <---> number of connections to this port number base
-    private final Map<Integer, Integer> connectionsByPortNumber;
+    private final Map<Integer, Integer> connectionsByPortNumber = new HashMap<>();
 
-    private final File rootDir;
+    private File rootDir;
 
-    private final Lock lock;
+    private final Lock lock = new ReentrantReadWriteLock().writeLock();
 
-    public H2Driver(BundleContext bundleContext) {
-        this.lock = new ReentrantReadWriteLock().writeLock();
-        this.servers = new HashMap<>();
-        this.connectionsByPortNumber = new HashMap<>();
+    public H2Driver() {
+        wrappedDriver = new org.h2.Driver();
+    }
+
+    @PostRegistration
+    public void registered(ServiceReference reference) {
+        BundleContext bundleContext = reference.getBundle().getBundleContext();
         File tmpFile = bundleContext.getDataFile("H2").getParentFile();
         rootDir = new File(tmpFile, "H2_DATABASES");
     }
-
-    @Bind(filter="(" + DataSourceFactory.OSGI_JDBC_DRIVER_CLASS + "=org.h2.Driver)")
-    public void bindDatasourceFactory(DataSourceFactory h2DataSourceFactory) {
-        this.h2DataSourceFactory = h2DataSourceFactory;
-    }
-
-
-
 
     /**
      * Register the driver in the driver manager
      */
     @Validate
     public void validate() throws SQLException {
-        // get wrapped driver
-        this.wrappedDriver = h2DataSourceFactory.createDriver(null);
-
+        // It doesn't matter if we register this Driver instance multiple times
         DriverManager.registerDriver(this);
     }
 
@@ -257,6 +266,8 @@ public class H2Driver implements Driver {
 
     @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        // H2 Driver class does not implement that method
+        // We have to implement it our-self to avoid NoSuchMethodError type of Exceptions
         throw new SQLFeatureNotSupportedException("H2 driver does not support this feature");
     }
 

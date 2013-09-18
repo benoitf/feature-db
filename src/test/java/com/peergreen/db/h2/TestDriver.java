@@ -39,12 +39,12 @@ import java.util.List;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.service.jdbc.DataSourceFactory;
+import org.osgi.framework.ServiceReference;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-
-import com.peergreen.db.h2.H2Driver;
 
 /**
  * Test the Peergreen/H2 driver.
@@ -53,10 +53,13 @@ import com.peergreen.db.h2.H2Driver;
 public class TestDriver {
 
     @Mock
-    private DataSourceFactory dataSourceFactory;
+    private Bundle bundle;
 
     @Mock
     private BundleContext bundleContext;
+
+    @Mock
+    private ServiceReference<?> reference;
 
     private final int portNumber = 1503;
 
@@ -75,15 +78,19 @@ public class TestDriver {
         // setup bundle context
         URL url = TestDriver.class.getClassLoader().getResource(TestDriver.class.getName().replace(".", "/").concat(".class"));
         File f = new File(url.toURI().getPath());
+        doReturn(bundle).when(reference).getBundle();
+        doReturn(bundleContext).when(bundle).getBundleContext();
         doReturn(f.getParentFile()).when(bundleContext).getDataFile("H2");
 
-        // setup factory
-        doReturn(org.h2.Driver.load()).when(dataSourceFactory).createDriver(null);
-
         // setup driver
-        H2Driver h2Driver = new H2Driver(bundleContext);
-        h2Driver.bindDatasourceFactory(dataSourceFactory);
+        H2Driver h2Driver = H2Driver.instance();
+        h2Driver.registered(reference);
         h2Driver.validate();
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+        H2Driver.instance().invalidate();
     }
 
     @Test(expectedExceptions=ConnectException.class)
