@@ -30,13 +30,12 @@ import java.util.logging.Logger;
 import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Instantiate;
 import org.apache.felix.ipojo.annotations.Invalidate;
-import org.apache.felix.ipojo.annotations.PostRegistration;
-import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.h2.engine.Constants;
 import org.h2.jdbc.JdbcConnection;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
+import org.osgi.framework.FrameworkUtil;
 
 import com.peergreen.db.h2.internal.H2ConnectionInvocationHandler;
 import com.peergreen.db.h2.internal.H2Server;
@@ -48,7 +47,6 @@ import com.peergreen.db.h2.internal.H2ServerException;
  */
 @Component(factoryMethod = "instance")
 @Instantiate
-@Provides // Keep this to have @PostRegistration working to get the actual BundleContext
 public class H2Driver implements Driver {
 
     private static H2Driver INSTANCE = new H2Driver();
@@ -88,13 +86,19 @@ public class H2Driver implements Driver {
 
     public H2Driver() {
         wrappedDriver = new org.h2.Driver();
+        resolveRootDirectory();
     }
 
-    @PostRegistration
-    public void registered(ServiceReference reference) {
-        BundleContext bundleContext = reference.getBundle().getBundleContext();
-        File tmpFile = bundleContext.getDataFile("H2").getParentFile();
-        rootDir = new File(tmpFile, "H2_DATABASES");
+    private void resolveRootDirectory() {
+        Bundle bundle = FrameworkUtil.getBundle(H2Driver.class);
+        if (bundle != null) {
+            BundleContext bundleContext = bundle.getBundleContext();
+            File tmpFile = bundleContext.getDataFile("H2").getParentFile();
+            rootDir = new File(tmpFile, "H2_DATABASES");
+        } else {
+            // fallback to System tmp dir (should only happens during tests)
+            rootDir = new File(System.getProperty("java.io.tmpdir"));
+        }
     }
 
     /**

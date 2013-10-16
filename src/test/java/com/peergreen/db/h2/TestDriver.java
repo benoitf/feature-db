@@ -80,7 +80,6 @@ public class TestDriver {
 
         // setup driver
         H2Driver h2Driver = H2Driver.instance();
-        h2Driver.registered(reference);
         h2Driver.validate();
     }
 
